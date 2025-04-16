@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Pengumuman;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PengumumanController extends Controller
 {
@@ -13,7 +15,7 @@ class PengumumanController extends Controller
     $search = $request->input('search');
 
     $pengumuman = Pengumuman::when($search, function ($query) use ($search) {
-        return $query->where('judul_pengumuman', 'like', "%{$search}%");
+      return $query->where('judul_pengumuman', 'like', "%{$search}%");
     })->orderBy('created_at', 'desc')->paginate(2);
 
     return view('admin.pengumuman.pengumuman', compact('pengumuman', 'search'));
@@ -23,17 +25,67 @@ class PengumumanController extends Controller
   {
     $search = $request->input('search');
 
-    $pengumuman = Pengumuman::when($search, function ($query) use ($search) {
-        return $query->where('judul_pengumuman', 'like', "%{$search}%");
-    })->orderBy('created_at', 'desc')->paginate(10);
-    return view('ppkha.pengumuman', compact('pengumuman','search'));
+    // Panggil API
+    $response = Http::get('http://127.0.0.1:8001/api/pengumuman', [
+      'search' => $search,
+    ]);
+
+    if ($response->successful()) {
+      $data = collect($response->json()['data'])->map(fn($item) => (object) $item);
+
+      // Konversi ke Collection
+      $collection = collect($data);
+
+      // Buat pagination manual (karena API tidak menyediakan paginate bawaan)
+      $perPage = 10;
+      $currentPage = LengthAwarePaginator::resolveCurrentPage();
+      $pagedData = $collection->slice(($currentPage - 1) * $perPage, $perPage)->values();
+      $pengumuman = new LengthAwarePaginator(
+        $pagedData,
+        $collection->count(),
+        $perPage,
+        $currentPage,
+        ['path' => request()->url(), 'query' => request()->query()]
+      );
+
+      return view('ppkha.pengumuman', compact('pengumuman', 'search'));
+    }
+
+    // Jika gagal ambil data
+    return back()->withErrors(['error' => 'Gagal mengambil data pengumuman dari API.']);
   }
 
   public function showPengumumanDetailUser($id)
   {
-    $pengumuman = Pengumuman::findOrFail($id);
-    return view('ppkha.detailPengumuman', compact('pengumuman'));
+    $response = Http::get("http://127.0.0.1:8001/api/pengumuman/{$id}");
+
+    if (!$response->successful()) {
+      return back()->withErrors(['error' => 'Gagal mengambil data dari API.']);
+    }
+
+    $pengumumanData = $response->json()['data'] ?? null;
+
+    if (!$pengumumanData) {
+      return back()->withErrors(['error' => 'Data pengumuman tidak ditemukan.']);
+    }
+
+    // Konversi lampiran ke array of [path, url]
+    $lampiran = collect(json_decode($pengumumanData['lampiran'] ?? '[]', true))
+      ->map(function ($filePath) {
+        return [
+          'path' => $filePath,
+          'url'  => env('BACKEND_FILE_URL') . '/' . ltrim($filePath, '/'),
+        ];
+      })
+      ->toArray();
+
+
+    $pengumuman = (object) $pengumumanData;
+
+    return view('ppkha.detailPengumuman', compact('pengumuman', 'lampiran'));
   }
+
+
 
   public function create()
   {
@@ -80,55 +132,6 @@ class PengumumanController extends Controller
     return view('admin.pengumuman.pengumumanEdit', compact('pengumuman'));
   }
 
-  public function update(Request $request, $id)
-  {
-    $pengumuman = Pengumuman::findOrFail($id);
-
-    // Validasi input
-    $request->validate([
-      'judul_pengumuman' => 'required|string',
-      'deskripsi_pengumuman' => 'required|string',
-      'lampiran.*' => 'file|mimes:jpg,jpeg,png,pdf',
-    ]);
-
-    // Update data pengumuman
-    $pengumuman->judul_pengumuman = $request->judul_pengumuman;
-    $pengumuman->deskripsi_pengumuman = $request->deskripsi_pengumuman;
-
-    // Hapus lampiran yang dipilih
-    if ($request->has('hapus_lampiran')) {
-      $lampiranTerbaru = json_decode($pengumuman->lampiran, true) ?? [];
-
-      foreach ($request->hapus_lampiran as $file) {
-        if ($file) { // Hanya hapus jika file tidak null
-          Storage::delete($file);
-          $lampiranTerbaru = array_filter($lampiranTerbaru, fn($item) => $item !== $file);
-        }
-      }
-
-      // Simpan kembali daftar lampiran yang tersisa
-      $pengumuman->lampiran = json_encode(array_values($lampiranTerbaru));
-    }
-
-    // Tambahkan lampiran baru
-    if ($request->hasFile('lampiran')) {
-      $lampiranBaru = [];
-      foreach ($request->file('lampiran') as $file) {
-        $path = $file->store('lampiran_pengumuman', 'public');
-        $lampiranBaru[] = $path;
-      }
-
-      // Gabungkan dengan lampiran yang masih ada
-      $lampiranLama = json_decode($pengumuman->lampiran, true) ?? [];
-      $pengumuman->lampiran = json_encode(array_merge($lampiranLama, $lampiranBaru));
-    }
-
-    $pengumuman->save();
-
-    return redirect()->route('admin.pengumuman.index')->with('success', 'Pengumuman berhasil diperbarui!');
-  }
-
-
   public function destroy($id)
   {
     try {
@@ -136,16 +139,31 @@ class PengumumanController extends Controller
       $lampiranPaths = json_decode($pengumuman->lampiran ?? '[]', true);
 
       foreach ($lampiranPaths as $file) {
-        if (Storage::disk('public')->exists($file)) {
-          Storage::disk('public')->delete($file);
+        // Tangani path string dan object dari API
+        $filePath = null;
+        if (is_array($file)) {
+          // Jika dari API, ambil 'nama_file' dan pastikan string
+          $filePath = isset($file['nama_file']) && is_string($file['nama_file']) ? $file['nama_file'] : null;
+        } else {
+          // Jika dari web, gunakan langsung jika string
+          $filePath = is_string($file) ? $file : null;
+        }
+
+        // Lewati jika $filePath bukan string atau null
+        if (!$filePath) {
+          continue;
+        }
+
+        // Hapus file jika ada
+        if (Storage::disk('public')->exists($filePath)) {
+          Storage::disk('public')->delete($filePath);
         }
       }
 
       $pengumuman->delete();
       return response()->json(['success' => true]);
     } catch (\Exception $e) {
-      return response()->json(['success' => false, 'message' => 'Gagal menghapus pengumuman.'], 500);
+      return response()->json(['success' => false, 'message' => 'Gagal menghapus pengumuman: ' . $e->getMessage()], 500);
     }
   }
 }
-
