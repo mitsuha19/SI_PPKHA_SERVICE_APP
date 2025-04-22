@@ -6,16 +6,18 @@ use App\Models\Artikel;
 // use Illuminate\Container\Attributes\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ArtikelController extends Controller
 {
     public function showArtikelAdmin(Request $request){
 
-      $search = $request->input('search');
+        $search = $request->input('search');
 
-    $artikel = Artikel::when($search, function ($query) use ($search) {
-        return $query->where('judul_artikel', 'like', "%{$search}%");
-    })->orderBy('created_at', 'desc')->paginate(2);
+        $artikel = Artikel::when($search, function ($query) use ($search) {
+            return $query->where('judul_artikel', 'like', "%{$search}%");
+        })->orderBy('created_at', 'desc')->paginate(2);
 
         
         return view('admin.artikel.artikel', compact('artikel', 'search'));
@@ -24,20 +26,66 @@ class ArtikelController extends Controller
     public function showArtikelUser(Request $request){
         $search = $request->input('search');
 
-    $artikel = Artikel::when($search, function ($query) use ($search) {
-        return $query->where('judul_artikel', 'like', "%{$search}%");
-    })->orderBy('created_at', 'desc')->paginate(9);
-        return view('ppkha.artikel', compact('artikel','search'));
+        // Panggil API
+        $response = Http::get('http://127.0.0.1:8001/api/artikel', [
+            'search' => $search,
+        ]);
+
+        if ($response->successful()) {
+            $data = collect($response->json()['data'])->map(fn($item) => (object) $item);
+    
+            // Konversi ke Collection
+            $collection = collect($data);
+    
+            // Buat pagination manual (karena API tidak menyediakan paginate bawaan)
+            $perPage = 10;
+            $currentPage = LengthAwarePaginator::resolveCurrentPage();
+            $pagedData = $collection->slice(($currentPage - 1) * $perPage, $perPage)->values();
+            $artikel = new LengthAwarePaginator(
+                $pagedData,
+                $collection->count(),
+                $perPage,
+                $currentPage,
+                ['path' => request()->url(), 'query' => request()->query()]
+            );
+
+            return view('ppkha.artikel', compact('artikel', 'search'));
+        }
+
+        // Jika gagal ambil data
+        return back()->withErrors(['error' => 'Gagal mengambil data artikel dari API.']);
     }
 
     public function showArtikelDetailUser($id) {
-        // Ambil artikel yang sedang ditampilkan
-        $artikel = Artikel::findOrFail($id);
+        $response = Http::get("http://127.0.0.1:8001/api/artikel/{$id}");
+
+        if (!$response->successful()) {
+            return back()->withErrors(['error' => 'Gagal mengambil data dari API.']);
+        }
+        $artikelData = $response->json()['data'] ?? null;
+
+        if (!$artikelData) {
+            return back()->withErrors(['error' => 'Data artikel tidak ditemukan.']);
+        }// Konversi gambar ke array of [path, url]
+        $gambar = collect(json_decode($artikelData['gambar'] ?? '[]', true))
+        ->map(function ($filePath) {
+            return [
+                'path' => $filePath,
+                'url'  => env('BACKEND_FILE_URL') . '/' . ltrim($filePath, '/'),
+            ];
+        })->toArray();
+
+        $artikel = (object) $artikelData;
+
+        // return view('ppkha.detailArtikel', compact('berita', 'gambar'));
+
+        // // Ambil artikel yang sedang ditampilkan
+        // $artikel = Artikel::findOrFail($id);
         
         // Ambil semua artikel sebagai rekomendasi
         $artikelRekomendasi = Artikel::orderBy('created_at', 'desc')->get();
         
-        return view('ppkha.detailArtikel', compact('artikel', 'artikelRekomendasi'));
+        return view('ppkha.detailArtikel', compact('artikel', 'artikelRekomendasi', 'gambar'));
     }
 
     public function createArtikel(){
@@ -70,7 +118,7 @@ class ArtikelController extends Controller
     }
 
     public function showArtikelEditAdmin($id){
-        $artikel = Artikel::findOrFail($id);// Ambil data berita berdasarkan ID
+        $artikel = Artikel::findOrFail($id);// Ambil data artikel berdasarkan ID
         return view('admin.artikel.artikelEdit', compact('artikel'));
     }
 
