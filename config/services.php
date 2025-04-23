@@ -39,4 +39,8 @@ return [
         'url' => env('API_URL', 'https://cis-dev.del.ac.id/api'),
     ],
 
+    'auth_api' => [
+        'url' => env('AUTH_API_URL'),
+    ],
+
 ];
