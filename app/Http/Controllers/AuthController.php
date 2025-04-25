@@ -57,10 +57,10 @@ class AuthController extends Controller
 
         if (isset($result['token'])) {
             Session::put('api_token', $result['token']);
-            return redirect()->route('home')->with('success', 'Registration successful');
+            return redirect('/')->with('success', 'Registrasi Berhasil');
         }
 
-        return back()->withErrors(['api' => $result['message'] ?? 'Registration failed']);
+        return back()->withErrors(['api' => $result['message'] ?? 'Registrasi Gagal']);
     }
 
     public function showLogin()
@@ -75,19 +75,32 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        if (config('app.login_require_captcha')) {
+            $rules['g-recaptcha-response'] = 'required|captcha';
+        }
+
         $result = $this->authApi->login($request->only(['nim', 'password']));
 
         if (isset($result['token'])) {
             Session::put('api_token', $result['token']);
-            return redirect('/')->with('success', 'Login successful');
+            Session::put('user', $result['user']);
+
+            // Redirect based on role
+            $role = $result['user']['role'];
+            return match ($role) {
+                'admin'  => redirect('/admin')->with('success', 'Welcome, Big Boss!'),
+                'alumni' => redirect('/')->with('success', 'Login Sukses'),
+            };
         }
 
-        return back()->withErrors(['auth' => $result['message'] ?? 'Login failed']);
+        return back()->withErrors(['auth' => $result['message'] ?? 'Login Berhasil']);
     }
 
     public function logout()
     {
         Session::forget('api_token');
-        return redirect()->route('login')->with('success', 'Logged out');
+        Session::forget('user');
+
+        return redirect('/')->with('success', 'Logged out successfully');
     }
 }

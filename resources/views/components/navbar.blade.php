@@ -60,13 +60,8 @@
                 </li>
                 @endforeach
 
-                @guest
-                <li class="me-3"><a href="{{ route('login') }}" class="text-white">Login</a></li>
-                @endguest
-
-                @auth
+                @if (session()->has('user'))
                 <li>
-                    <!-- Public Logout Form with Custom SweetAlert2 Confirmation -->
                     <form id="public-logout-form" action="{{ route('logout') }}" method="POST"
                         class="d-flex align-items-center justify-content-center text-decoration-none"
                         style="margin-left: auto; margin-right: auto; background: none; border: none; padding: 0;">
@@ -74,14 +69,17 @@
                         <button type="button" class="btn btn-transparent d-flex align-items-center text-decoration-none"
                             style="background: none; border: none; padding: 0;" onclick="showLogoutConfirmation(event)">
                             <span class="fw-bold" style="font-size: 14px; margin-right: 5px; color: #FFFFFF;">
-                                Hi, {{ Auth::user()->name }}
+                                Hi, {{ session('user.name') }}
                             </span>
                             <img src="{{ asset('assets/images/logout-04.png') }}" alt="Logout Icon"
                                 style="margin-left: 5px;">
                         </button>
                     </form>
                 </li>
-                @endauth
+                @else
+                <li class="me-3"><a href="{{ route('login') }}" class="text-white">Login</a></li>
+                @endif
+
 
                 <script>
                     function showLogoutConfirmation(event) {

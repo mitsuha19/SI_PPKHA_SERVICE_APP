@@ -43,9 +43,8 @@ Route::get('/lowongan_pekerjaan', [LowonganController::class, 'showLowonganUser'
 Route::get('/lowongan_pekerjaan/detail/{id}', [LowonganController::class, 'showLowonganDetailUser'])->name('ppkha.lowonganPekerjaanDetail');
 Route::get('/lowongan_pekerjaan/detail', fn() => view('ppkha.detaillowongan'));
 
-// tracer_study route accessible only to authenticated users with role "admin" or "alumni"
 Route::get('/tracer_study', fn() => view('ppkha.tracer_study'))
-    ->middleware(['auth', 'role:admin|alumni']);
+    ->middleware(['jwt.auth', 'jwt.role:admin|alumni']);
 
 Route::get('/user-survey', [UserSurveyController::class, 'showSurvey'])->name('survey.show');
 Route::post('/user-survey/submit', [UserSurveyController::class, 'submit'])->name('survey.submit');
@@ -59,7 +58,7 @@ Route::get('/tentang', fn() => view('ppkha.tentang'));
 
 Route::group([
     'prefix' => 'admin',
-    'middleware' => ['auth', 'role:admin']
+    'middleware' => ['jwt.auth', 'jwt.role:admin']
 ], function () {
 
     Route::get('/beranda', [BerandaController::class, 'showBerandaAdmin'])->name('beranda.edit');
@@ -178,7 +177,7 @@ Route::get('/forms', [FormController::class, 'index'])->name('forms.index');
 
 // Test Kuisioner for User
 Route::get('/kuesioner', [KuesionerController::class, 'show'])->name('kuesioner.show')
-    ->middleware(['auth', 'role:admin|alumni']);
+    ->middleware(['jwt.auth', 'jwt.role:alumni|admin']);
 Route::post('/kuesioner/next/{sectionId}', [KuesionerController::class, 'nextSection'])->name('kuesioner.next');
 Route::get('/kuesioner/previous/{sectionId}', [KuesionerController::class, 'previousSection'])->name('kuesioner.previous');
 Route::get('/kuesioner/submit', [KuesionerController::class, 'submit'])->name('kuesioner.submit');

@@ -41,6 +41,7 @@ return [
 
     'auth_api' => [
         'url' => env('AUTH_API_URL'),
+        'jwt_secret' => env('JWT_SECRET'),
     ],
 
 ];

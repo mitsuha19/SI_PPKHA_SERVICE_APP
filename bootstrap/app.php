@@ -13,10 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'jwt.auth'          => \App\Http\Middleware\JwtMiddleware::class,
-            'role'              => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission'        => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'jwt.auth'           => \App\Http\Middleware\JwtMiddleware::class,
+            'jwt.role'           => \App\Http\Middleware\JwtRole::class,
+
+            // 'role'               => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            // 'permission'         => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            // 'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

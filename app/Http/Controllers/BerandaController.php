@@ -13,7 +13,7 @@ class BerandaController extends Controller
 {
     public function index()
     {
-        
+
         $pengumuman = Pengumuman::latest()->take(3)->get();
 
         // Mengambil artikel terbaru
