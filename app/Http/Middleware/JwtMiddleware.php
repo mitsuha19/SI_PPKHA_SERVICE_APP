@@ -27,12 +27,6 @@ class JwtMiddleware
                 return response()->json(['error' => 'Session expired, please log in again'], 401);
             }
 
-            // Save user info in session
-            Session::put('user', [
-                'name' => $decoded->name,
-                'role' => $decoded->role,
-            ]);
-
             $request->merge(['auth_user' => (array) $decoded]);
 
             return $next($request);

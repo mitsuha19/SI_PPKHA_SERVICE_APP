@@ -26,7 +26,7 @@
                 <button type="submit" class="btn btn-transparent d-flex align-items-center text-decoration-none"
                     style="background: none; border: none; padding: 0;" onclick="return showLogoutConfirmation(event);">
                     <span class="fw-bold" style="font-size: 14px; margin-right: 5px; color: #000000;">
-                        Hi, {{ Auth::user()->name }}
+                        Hi, {{ session('user.name') }}
                     </span>
                     <img src="{{ asset('assets/images/logout-04.png') }}" alt="Logout Icon" style="margin-left: 5px;">
                 </button>
