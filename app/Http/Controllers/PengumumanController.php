@@ -107,8 +107,6 @@ class PengumumanController extends Controller
     return view('ppkha.detailPengumuman', compact('pengumuman', 'lampiran'));
   }
 
-
-
   public function create()
   {
     return view('admin.pengumuman.pengumumanAdd');
@@ -116,9 +114,22 @@ class PengumumanController extends Controller
 
   public function show($id)
   {
-    $pengumuman = Pengumuman::findOrFail($id);
+    $response = Http::get(config('services.main_api.url') . "/api/pengumuman/{$id}");
+
+    if (!$response->successful()) {
+      return back()->withErrors('Gagal mengambil data pengumuman dari API');
+    }
+
+    $pengumumanData = $response->json()['data'] ?? null;
+
+    if (!$pengumumanData) {
+      return back()->withErrors('Pengumuman tidak ditemukan');
+    }
+
+    $pengumuman = (object) $pengumumanData;
     return view('admin.pengumuman.pengumumanDetail', compact('pengumuman'));
   }
+
 
 
   public function store(Request $request)
@@ -167,40 +178,92 @@ class PengumumanController extends Controller
 
   public function edit($id)
   {
-    $pengumuman = Pengumuman::findOrFail($id);
+    $response = Http::get(config('services.main_api.url') . "/api/pengumuman/{$id}");
+
+    if (!$response->successful()) {
+      return back()->withErrors('Gagal mengambil data pengumuman dari API');
+    }
+
+    $pengumumanData = $response->json()['data'] ?? null;
+
+    if (!$pengumumanData) {
+      return back()->withErrors('Pengumuman tidak ditemukan');
+    }
+
+    $pengumuman = (object) $pengumumanData;
+
     return view('admin.pengumuman.pengumumanEdit', compact('pengumuman'));
   }
+
+  public function update(Request $request, $id)
+  {
+    $token = Session::get('api_token');
+    if (! $token) {
+      return redirect()->route('login')->withErrors('Sesi habis, silakan login ulang');
+    }
+
+    $request->validate([
+      'judul_pengumuman' => 'required|string',
+      'deskripsi_pengumuman' => 'required|string',
+      'lampiran.*' => 'file|mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx'
+    ]);
+
+    // Siapkan HTTP client dengan Bearer token
+    $http = Http::withToken($token);
+
+    // Jika ada file, attach sebagai multipart
+    if ($request->hasFile('lampiran')) {
+      foreach ($request->file('lampiran') as $file) {
+        $http = $http->attach(
+          'lampiran[]',
+          fopen($file->getPathname(), 'r'),
+          $file->getClientOriginalName()
+        );
+      }
+    }
+
+    // Kirim PUT request ke Service Main
+    $response = $http->put(
+      config('services.main_api.url') . "/api/pengumuman/{$id}",
+      [
+        'judul_pengumuman'     => $request->judul_pengumuman,
+        'deskripsi_pengumuman' => $request->deskripsi_pengumuman,
+      ]
+    );
+
+    if (! $response->successful()) {
+      $err = $response->json('message')
+        ?? $response->json('error')
+        ?? 'Gagal memperbarui pengumuman';
+      return back()->withErrors((array) $err);
+    }
+
+    return redirect()->route('admin.pengumuman.index')->with('success', 'Pengumuman berhasil diperbarui!');
+  }
+
 
   public function destroy($id)
   {
     try {
-      $pengumuman = Pengumuman::findOrFail($id);
-      $lampiranPaths = json_decode($pengumuman->lampiran ?? '[]', true);
+      // Ambil token dari session
+      $token = Session::get('api_token');
 
-      foreach ($lampiranPaths as $file) {
-        // Tangani path string dan object dari API
-        $filePath = null;
-        if (is_array($file)) {
-          // Jika dari API, ambil 'nama_file' dan pastikan string
-          $filePath = isset($file['nama_file']) && is_string($file['nama_file']) ? $file['nama_file'] : null;
-        } else {
-          // Jika dari web, gunakan langsung jika string
-          $filePath = is_string($file) ? $file : null;
-        }
-
-        // Lewati jika $filePath bukan string atau null
-        if (!$filePath) {
-          continue;
-        }
-
-        // Hapus file jika ada
-        if (Storage::disk('public')->exists($filePath)) {
-          Storage::disk('public')->delete($filePath);
-        }
+      if (!$token) {
+        return response()->json(['success' => false, 'message' => 'Token tidak tersedia. Silakan login kembali.'], 401);
       }
 
-      $pengumuman->delete();
-      return response()->json(['success' => true]);
+      // Siapkan HTTP client dengan Bearer token
+      $http = Http::withToken($token);
+
+      // Kirim request DELETE ke Service Main untuk menghapus pengumuman
+      $response = $http->delete(config('services.main_api.url') . "/api/pengumuman/{$id}");
+
+      // Cek apakah penghapusan berhasil
+      if ($response->successful()) {
+        return response()->json(['success' => true, 'message' => 'Pengumuman berhasil dihapus.']);
+      } else {
+        return response()->json(['success' => false, 'message' => 'Gagal menghapus pengumuman.'], 500);
+      }
     } catch (\Exception $e) {
       return response()->json(['success' => false, 'message' => 'Gagal menghapus pengumuman: ' . $e->getMessage()], 500);
     }

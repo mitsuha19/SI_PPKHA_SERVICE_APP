@@ -17,11 +17,13 @@
 
                         {{-- Tombol Edit dan Hapus --}}
                         <div class="align-self-start">
-                            <a href="{{ route('admin.pengumuman.edit', ['id' => $pengumuman->id]) }}" class="btn" id="btn-edit">
-                                <i class='bx bx-pencil'></i> 
+                            <a href="{{ route('admin.pengumuman.edit', ['id' => $pengumuman->id]) }}" class="btn"
+                                id="btn-edit">
+                                <i class='bx bx-pencil'></i>
                                 <span class="d-none d-xl-inline ms-1">Edit</span>
                             </a>
-                            <button type="button" id="btn-hapus" class="btn align-items-center" onclick="openDeleteModal({{ $pengumuman->id }}, '{{ $pengumuman->judul_berita }}')">
+                            <button type="button" id="btn-hapus" class="btn align-items-center"
+                                onclick="openDeleteModal({{ $pengumuman->id }}, '{{ $pengumuman->judul_pengumuman }}')">
                                 <i class='bx bx-trash fs-5 me-2'></i> Hapus
                             </button>
                         </div>
@@ -34,32 +36,33 @@
                         {!! nl2br(e($pengumuman->deskripsi_pengumuman)) !!}
                     </p>
 
-                    
-  <h5 style="font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: white;">Nama File:</h5>
-  <hr>
 
-  @php
-    $lampiran = json_decode($pengumuman->lampiran, true) ?? [];
-@endphp
+                    <h5 style="font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: white;">Nama File:</h5>
+                    <hr>
 
-@if (!empty($lampiran) && is_array($lampiran) && count($lampiran))
-<ul style="font-size: 1rem; color: white; list-style: none; padding: 0;">
-@foreach ($lampiran as $file)
-            <li style="margin-bottom: 10px;">
-                @if (Storage::disk('public')->exists($file))
-                    <a href="{{ asset('storage/' . $file) }}" target="_blank"
-                        style="color: white;">
-                        {{ basename($file) }}
-                    </a>
-                @else
-                    <span style="color: #999;">File tidak tersedia</span>
-                @endif
-            </li>
-        @endforeach
-    </ul>
-@else
-    <p style="font-size: 1rem; color: #777;">Tidak ada lampiran tersedia.</p>
-@endif
+                    @php
+                        $lampiran = json_decode($pengumuman->lampiran, true) ?? [];
+                    @endphp
+
+                    @if (!empty($lampiran) && is_array($lampiran) && count($lampiran))
+                        <ul style="font-size: 1rem; color: white; list-style: none; padding: 0;">
+                            @foreach ($lampiran as $file)
+                                <li style="margin-bottom: 10px;">
+                                    {{-- Membuat URL lengkap untuk file di server berdasarkan BACKEND_FILE_URL --}}
+                                    @php
+                                        $fileUrl = env('BACKEND_FILE_URL') . '/' . $file;
+                                    @endphp
+
+                                    {{-- Menampilkan link ke file yang ada di server atau cloud storage --}}
+                                    <a href="{{ $fileUrl }}" target="_blank" style="color: white;">
+                                        {{ basename($file) }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p style="font-size: 1rem; color: #777;">Tidak ada lampiran tersedia.</p>
+                    @endif
 
                     {{-- Tombol Kembali --}}
                     <div class="detail">
@@ -72,28 +75,28 @@
 
 
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="background: linear-gradient(to bottom, #80C7D9, #446973);">
-      <div class="modal-body d-flex flex-column align-items-center justify-content-center gap-4">
-        
-        <h5 class="modal-title" id="deleteModalLabel"></h5>
-        <h2 class="text-center">Apakah anda yakin untuk menghapus <b id="pengumumanTitle"></b>?</h2>
-        
-        <div class="d-flex gap-3">
-          <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal" 
-            style="padding: 15px 40px; font-size: 1.5rem; background: linear-gradient(to bottom, #80C7D9, #446973); border: none;">
-            Cancel
-          </button>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: linear-gradient(to bottom, #80C7D9, #446973);">
+                <div class="modal-body d-flex flex-column align-items-center justify-content-center gap-4">
 
-          <button type="button" class="btn btn-lg text-white" id="confirmDeleteButton" 
-            style="padding: 15px 40px; font-size: 1.5rem; background: linear-gradient(to bottom, #80C7D9, #446973); border: none;">
-            Yes
-          </button>
+                    <h5 class="modal-title" id="deleteModalLabel"></h5>
+                    <h2 class="text-center">Apakah anda yakin untuk menghapus <b id="pengumumanTitle"></b>?</h2>
+
+                    <div class="d-flex gap-3">
+                        <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal"
+                            style="padding: 15px 40px; font-size: 1.5rem; background: linear-gradient(to bottom, #80C7D9, #446973); border: none;">
+                            Cancel
+                        </button>
+
+                        <button type="button" class="btn btn-lg text-white" id="confirmDeleteButton"
+                            style="padding: 15px 40px; font-size: 1.5rem; background: linear-gradient(to bottom, #80C7D9, #446973); border: none;">
+                            Yes
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-</div>
 
     <script>
         let selectedId = null;
@@ -128,4 +131,3 @@
         });
     </script>
 @endsection
-
