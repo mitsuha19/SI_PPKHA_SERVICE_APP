@@ -32,15 +32,18 @@
         <div class="card-information d-flex align-items-center px-3">
           {{-- Ambil gambar pertama jika tersedia --}}
           @php
-          $gambarArray = json_decode($item['gambar'], true) ?? [];
+            $gambar = json_decode($item['gambar'], true) ?? [];
           @endphp
 
-          @if (!empty($gambarArray) && isset($gambarArray[0]['nama_file']))
-          <img style="width: 100px" src="{{ url('api/berita/' . $item['id'] . '/gambar/' . $gambarArray[0]['nama_file']) }}"
-          alt="Gambar Berita">
-          @else
-          <img style="width: 100px" src="{{ asset('assets/images/image.png') }}" alt="Default Gambar">
-          @endif
+          @if (!empty($gambar) && is_array($gambar) && count($gambar))
+        @php
+            $file = $gambar[0]; // ambil file pertama
+            $fileUrl = env('BACKEND_FILE_URL') . '/' . $file;
+        @endphp
+        <img style="width: 100px" src="{{ $fileUrl }}" alt="Gambar Berita">
+    @else
+        <img style="width: 100px" src="{{ asset('assets/images/image.png') }}" alt="Default Gambar">
+    @endif
 
           <div class="ps-3 w-100">
             {{-- Judul Berita --}}
