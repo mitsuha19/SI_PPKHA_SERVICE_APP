@@ -32,11 +32,12 @@
         <div class="card-information d-flex align-items-center px-3">
           {{-- Ambil gambar pertama jika tersedia --}}
           @php
-              $gambarArray = $item->gambar ?? []; // Laravel otomatis mengubah JSON ke array
+          $gambarArray = json_decode($item['gambar'], true) ?? [];
           @endphp
 
-          @if (!empty($gambarArray) && isset($gambarArray[0]))
-          <img style="width: 100px" src="{{ asset('storage/' . $gambarArray[0]) }}" alt="Gambar Berita">
+          @if (!empty($gambarArray) && isset($gambarArray[0]['nama_file']))
+          <img style="width: 100px" src="{{ url('api/berita/' . $item['id'] . '/gambar/' . $gambarArray[0]['nama_file']) }}"
+          alt="Gambar Berita">
           @else
           <img style="width: 100px" src="{{ asset('assets/images/image.png') }}" alt="Default Gambar">
           @endif
@@ -45,15 +46,15 @@
             {{-- Judul Berita --}}
             <div class="d-flex flex-md-row flex-sm-column w-auto justify-content-start align-items-end">
               <h2 class="fst-italic roboto-title mb-0 align-self-center">
-                {{ $item->judul_berita }}
+                {{ $item['judul_berita'] }}
               </h2>
               <div class="align-self-start">
               <div class="ms-auto d-flex gap-2">
-                  <button type="button" id="btn-edit" class="btn btn-primary px-4 py-2 fw-bold d-flex align-items-center" onclick="window.location.href='{{ route('admin.berita.beritaEdit', $item->id) }}'">
+                  <button type="button" id="btn-edit" class="btn btn-primary px-4 py-2 fw-bold d-flex align-items-center" onclick="window.location.href='{{ route('admin.berita.beritaEdit', $item['id']) }}'">
                       <i class='bx bx-pencil fs-5 me-2'></i> Edit
                   </button>
                   
-                  <button type="button" id="btn-hapus" class="btn btn-primary px-4 py-2 fw-bold d-flex align-items-center" onclick="openDeleteModal({{ $item->id }}, '{{ $item->judul_berita }}')">
+                  <button type="button" id="btn-hapus" class="btn btn-primary px-4 py-2 fw-bold d-flex align-items-center" onclick="openDeleteModal({{ $item['id'] }}, '{{ $item['judul_berita'] }}')">
                       <i class='bx bx-trash fs-5 me-2'></i> Hapus
                   </button>                      
               </div>
@@ -66,12 +67,12 @@
 
             {{-- Deskripsi Berita --}}
             <p class="roboto-light mb-1 mt-2" style="font-size: 15px">
-              {{ Str::limit($item->deskripsi_berita, 200, '...') }}
+              {{ Str::limit($item['deskripsi_berita'], 200, '...') }}
             </p>
 
             {{-- Link ke Detail Berita --}}
             <div class="detail">
-              <a href="{{ route('admin.berita.beritaDetail', ['id' => $item->id]) }}">Selengkapnya..</a>
+              <a href="{{ route('admin.berita.beritaDetail', $item['id']) }}">Selengkapnya..</a>
             </div>
           </div>
         </div>

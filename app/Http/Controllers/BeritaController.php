@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Berita;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class BeritaController extends Controller
@@ -14,10 +15,30 @@ class BeritaController extends Controller
   {
     $search = $request->input('search');
 
-    $berita = Berita::when($search, function ($query) use ($search) {
-      return $query->where('judul_berita', 'like', "%{$search}%");
-    })->orderBy('created_at', 'desc')->paginate(2);
+    // Membuat HTTP request untuk mengambil data berita dari API
+    $response = Http::get(config('services.main_api.url') . '/api/berita', [
+      'search' => $search,
+    ]);
 
+    // Jika response tidak berhasil
+    if (!$response->successful()) {
+      return back()->withErrors('Gagal mengambil data berita');
+    }
+
+    // Ambil data dari response API dan pastikan data dalam bentuk koleksi
+    $data = collect($response->json()['data']);  // Mengubah array menjadi koleksi
+
+    // Pagination manual
+    $perPage = 2;  // Jumlah per halaman
+    $currentPage = LengthAwarePaginator::resolveCurrentPage();
+    $pagedData = $data->slice(($currentPage - 1) * $perPage, $perPage)->values();
+    $berita = new LengthAwarePaginator(
+      $pagedData,
+      $data->count(),
+      $perPage,
+      $currentPage,
+      ['path' => request()->url(), 'query' => request()->query()]
+    );
     return view('admin.berita.berita', compact('berita', 'search'));
   }
 
@@ -124,24 +145,44 @@ class BeritaController extends Controller
 
   public function store(Request $request)
   {
-    $validatedData = $request->validate([
+    $token = Session::get('api_token');
+    if (! $token) {
+      return redirect()->route('login')
+        ->withErrors('Sesi habis, silakan login ulang');
+    }
+
+    $request->validate([
       'judul_berita' => 'required|string',
       'deskripsi_berita' => 'required|string',
       'gambar.*' => 'nullable|file|mimes:jpg,jpeg,png',
     ]);
 
-    $gambarPaths = [];
+    $http = Http::withToken($token);
+
     if ($request->hasFile('gambar')) {
       foreach ($request->file('gambar') as $file) {
-        $gambarPaths[] = $file->store('gambar', 'public');
+        $http = $http->attach(
+          'gambar[]',
+          fopen($file->getPathname(), 'r'),
+          $file->getClientOriginalName()
+        );
       }
     }
 
-    Berita::create([
-      'judul_berita' => $validatedData['judul_berita'],
-      'deskripsi_berita' => $validatedData['deskripsi_berita'],
-      'gambar' => $gambarPaths,
-    ]);
+    $response = $http->post(
+      config('services.main_api.url') . '/api/berita',
+      [
+        'judul_berita'     => $request->judul_berita,
+        'deskripsi_berita' => $request->deskripsi_berita,
+      ]
+    );
+
+    if (! $response->successful()) {
+      $err = $response->json('message')
+        ?? $response->json('error')
+        ?? 'Gagal membuat Berita';
+      return back()->withErrors((array) $err);
+    }
 
     return redirect()->route('admin.berita.berita')->with('success', 'Berita berhasil ditambahkan!');
   }
