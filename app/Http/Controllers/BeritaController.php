@@ -68,7 +68,7 @@ class BeritaController extends Controller
         $currentPage,
         ['path' => request()->url(), 'query' => request()->query()]
       );
-      dd(session()->all());
+     
       return view('ppkha.berita', compact('berita', 'search'));
     }
 
@@ -111,7 +111,19 @@ class BeritaController extends Controller
 
   public function index4($id)
   {
-    $berita = Berita::findOrFail($id); // Ambil data berita berdasarkan ID
+    $response = Http::get("http://127.0.0.1:8001/api/berita/{$id}");
+
+    if (!$response->successful()) {
+      return back()->withErrors('Gagal mengambil data pengumuman dari API');
+    }
+
+    $beritaData = $response->json()['data'] ?? null;
+
+    if (!$beritaData) {
+      return back()->withErrors('Pengumuman tidak ditemukan');
+    }
+
+    $berita = (object) $beritaData;
     return view('admin.berita.beritaEdit', compact('berita'));
   }
 
@@ -189,40 +201,47 @@ class BeritaController extends Controller
 
   public function update(Request $request, $id)
   {
-    $validatedData = $request->validate([
+    $token = Session::get('api_token');
+    if (! $token) {
+      return redirect()->route('login')->withErrors('Sesi habis, silakan login ulang');
+    }
+
+   $request->validate([
       'judul_berita' => 'required|string',
       'deskripsi_berita' => 'required|string',
       'gambar.*' => 'nullable|file|mimes:jpg,jpeg,png,gif',
     ]);
 
-    $berita = Berita::findOrFail($id);
+    $http = Http::withToken($token);
 
-    // Hapus gambar lama jika dicentang
-    if ($request->has('hapus_gambar')) {
-      foreach ($request->hapus_gambar as $file) {
-        if (Storage::disk('public')->exists($file)) {
-          Storage::disk('public')->delete($file);
-        }
-      }
-
-      // Filter gambar yang tidak dihapus
-      $berita->gambar = array_diff($berita->gambar ?? [], $request->hapus_gambar);
-    }
-
-    // Tambah gambar baru
-    $gambarPaths = $berita->gambar ?? [];
+    // Jika ada file, attach sebagai multipart
     if ($request->hasFile('gambar')) {
       foreach ($request->file('gambar') as $file) {
-        $gambarPaths[] = $file->store('gambar', 'public');
+        $http = $http->attach(
+          'gambar[]',
+          fopen($file->getPathname(), 'r'),
+          $file->getClientOriginalName()
+        );
       }
     }
 
-    // Update berita
-    $berita->update([
-      'judul_berita' => $validatedData['judul_berita'],
-      'deskripsi_berita' => $validatedData['deskripsi_berita'],
-      'gambar' => $gambarPaths,
-    ]);
+
+    // Kirim PUT request ke Service Main
+    $response = $http->post(
+      config('services.main_api.url') . "/api/berita/{$id}",
+      [
+          '_method'          => 'PUT', // ini penting
+          'judul_berita'     => $request->judul_berita,
+          'deskripsi_berita' => $request->deskripsi_berita,
+      ]
+  );
+
+    if (! $response->successful()) {
+      $err = $response->json('message')
+        ?? $response->json('error')
+        ?? 'Gagal memperbarui berita';
+      return back()->withErrors((array) $err);
+    }
 
     return redirect()->route('admin.berita.berita')->with('success', 'Berita berhasil diupdate!');
   }
@@ -230,12 +249,27 @@ class BeritaController extends Controller
   public function destroy($id)
   {
     try {
-      $berita = Berita::findOrFail($id);
-      $berita->delete();
+      // Ambil token dari session
+      $token = Session::get('api_token');
 
-      return response()->json(['success' => true]);
+      if (!$token) {
+        return response()->json(['success' => false, 'message' => 'Token tidak tersedia. Silakan login kembali.'], 401);
+      }
+
+      // Siapkan HTTP client dengan Bearer token
+      $http = Http::withToken($token);
+
+      // Kirim request DELETE ke Service Main untuk menghapus pengumuman
+      $response = $http->delete(config('services.main_api.url') . "/api/berita/{$id}");
+
+      // Cek apakah penghapusan berhasil
+      if ($response->successful()) {
+        return response()->json(['success' => true, 'message' => 'Berita berhasil dihapus.']);
+      } else {
+        return response()->json(['success' => false, 'message' => 'Gagal menghapus berita.'], 500);
+      }
     } catch (\Exception $e) {
-      return response()->json(['success' => false, 'message' => 'Gagal menghapus berita.'], 500);
+      return response()->json(['success' => false, 'message' => 'Gagal menghapus berita: ' . $e->getMessage()], 500);
     }
   }
 }
