@@ -7,6 +7,7 @@ use App\Models\Artikel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ArtikelController extends Controller
@@ -15,10 +16,30 @@ class ArtikelController extends Controller
 
         $search = $request->input('search');
 
-        $artikel = Artikel::when($search, function ($query) use ($search) {
-            return $query->where('judul_artikel', 'like', "%{$search}%");
-        })->orderBy('created_at', 'desc')->paginate(2);
+        // Membuat HTTP request untuk mengambil data artikel dari API
+        $response = Http::get(config('services.main_api.url') . '/api/artikel', [
+          'search' => $search,
+        ]);
 
+        // Jika response tidak berhasil
+        if (!$response->successful()) {
+          return back()->withErrors('Gagal mengambil data artikel');
+        }
+
+        // Ambil data dari response API dan pastikan data dalam bentuk koleksi
+        $data = collect($response->json()['data']);  // Mengubah array menjadi koleksi
+
+        // Pagination manual
+        $perPage = 2;  // Jumlah per halaman
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $pagedData = $data->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $artikel = new LengthAwarePaginator(
+          $pagedData,
+          $data->count(),
+          $perPage,
+          $currentPage,
+          ['path' => request()->url(), 'query' => request()->query()]
+        );
         
         return view('admin.artikel.artikel', compact('artikel', 'search'));
     }
@@ -77,7 +98,7 @@ class ArtikelController extends Controller
 
         $artikel = (object) $artikelData;
 
-        // return view('ppkha.detailArtikel', compact('berita', 'gambar'));
+        // return view('ppkha.detailArtikel', compact('artikel', 'gambar'));
 
         // // Ambil artikel yang sedang ditampilkan
         // $artikel = Artikel::findOrFail($id);
@@ -93,38 +114,78 @@ class ArtikelController extends Controller
     }
 
     public function store(Request $request) {
-        $validatedData = $request->validate([
+      $token = Session::get('api_token');
+      if (! $token) {
+        return redirect()->route('login')
+          ->withErrors('Sesi habis, silakan login ulang');
+      }
+        $request->validate([
             'judul_artikel' => 'required|string',
             'deskripsi_artikel' => 'required|string',
             'sumber_artikel' => 'nullable|url',
             'gambar.*' => 'nullable|file|mimes:jpg,jpeg,png',
         ]);
 
-        $gambarPaths = [];
+        $http = Http::withToken($token);
+
         if ($request->hasFile('gambar')) {
-            foreach ($request->file('gambar') as $file) {
-                $gambarPaths[] = $file->store('gambar', 'public');
-            }
+          foreach ($request->file('gambar') as $file) {
+            $http = $http->attach(
+              'gambar[]',
+              fopen($file->getPathname(), 'r'),
+              $file->getClientOriginalName()
+            );
+          }
         }
 
-        Artikel::create([
-            'judul_artikel' => $validatedData['judul_artikel'],
-            'deskripsi_artikel' => $validatedData['deskripsi_artikel'],
-            'sumber_artikel' => $validatedData['sumber_artikel'],
-            'gambar' => $gambarPaths,
-        ]);
+        $response = $http->post(
+          config('services.main_api.url') . '/api/artikel',
+          [
+            'judul_artikel'     => $request->judul_artikel,
+            'deskripsi_artikel' => $request->deskripsi_artikel,
+            'sumber_artikel'     => $request->sumber_artikel,
+          ]
+        );
+
+        if (! $response->successful()) {
+          $err = $response->json('message')
+            ?? $response->json('error')
+            ?? 'Gagal membuat Artikel';
+          return back()->withErrors((array) $err);
+        }
 
         return redirect()->route('admin.artikel.artikel')->with('success', 'Artikel berhasil ditambahkan!');
     }
 
-    public function showArtikelEditAdmin($id){
-        $artikel = Artikel::findOrFail($id);// Ambil data artikel berdasarkan ID
-        return view('admin.artikel.artikelEdit', compact('artikel'));
+    // public function showArtikelEditAdmin($id){
+    //     $artikel = Artikel::findOrFail($id);// Ambil data artikel berdasarkan ID
+    //     return view('admin.artikel.artikelEdit', compact('artikel'));
+    // }
+
+    public function showArtikelEditAdmin($id)
+  {
+    $response = Http::get("http://127.0.0.1:8001/api/artikel/{$id}");
+
+    if (!$response->successful()) {
+      return back()->withErrors('Gagal mengambil data Artikel dari API');
     }
+
+    $artikelData = $response->json()['data'] ?? null;
+
+    if (!$artikelData) {
+      return back()->withErrors('Artikel tidak ditemukan');
+    }
+
+    $artikel = (object) $artikelData;
+    return view('admin.artikel.artikelEdit', compact('artikel'));
+  }
 
     public function update(Request $request, $id)
 {
-    $artikel = Artikel::findOrFail($id);
+    $token = Session::get('api_token');
+      if (! $token) {
+        return redirect()->route('login')->withErrors('Sesi habis, silakan login ulang');
+      }
 
     $request->validate([
         'judul_artikel' => 'required|string|max:255',
@@ -133,34 +194,35 @@ class ArtikelController extends Controller
         'gambar.*' => 'file|mimes:jpg,jpeg,png,pdf|max:2048',
     ]);
 
-    $artikel->judul_artikel = $request->judul_artikel;
-    $artikel->deskripsi_artikel = $request->deskripsi_artikel;
-    $artikel->sumber_artikel = $request->sumber_artikel;
-
-    // Laravel sudah cast ke array, jadi tinggal pakai langsung
-    $gambarSekarang = $artikel->gambar ?? [];
+    $http = Http::withToken($token);
 
     // Hapus gambar jika diminta
-    if ($request->has('hapus_gambar')) {
-        foreach ($request->hapus_gambar as $file) {
-            if (in_array($file, $gambarSekarang)) {
-                Storage::disk('public')->delete($file);
-                $gambarSekarang = array_filter($gambarSekarang, fn($item) => $item !== $file);
-            }
-        }
-    }
-
-    // Tambahkan gambar baru jika ada
     if ($request->hasFile('gambar')) {
-        foreach ($request->file('gambar') as $file) {
-            $path = $file->store('gambar_pengumuman', 'public');
-            $gambarSekarang[] = $path;
-        }
+      foreach ($request->file('gambar') as $file) {
+        $http = $http->attach(
+          'gambar[]',
+          fopen($file->getPathname(), 'r'),
+          $file->getClientOriginalName()
+        );
+      }
     }
 
-    // Simpan array gambar langsung
-    $artikel->gambar = array_values($gambarSekarang);
-    $artikel->save();
+    $response = $http->post(
+      config('services.main_api.url') . "/api/artikel/{$id}",
+      [
+          '_method'          => 'PUT', // ini penting
+          'judul_artikel'     => $request->judul_artikel,
+          'deskripsi_artikel' => $request->deskripsi_artikel,
+          'sumber_artikel' => $request->sumber_artikel,
+      ]
+    );
+
+    if (! $response->successful()) {
+      $err = $response->json('message')
+        ?? $response->json('error')
+        ?? 'Gagal memperbarui Artikel';
+      return back()->withErrors((array) $err);
+    }
 
     return redirect()->route('admin.artikel.artikel')->with('success', 'Artikel berhasil diupdate!');
 }
@@ -174,12 +236,34 @@ class ArtikelController extends Controller
   
           return response()->json(['success' => true]);
       } catch (\Exception $e) {
-          return response()->json(['success' => false, 'message' => 'Gagal menghapus berita.'], 500);
+          return response()->json(['success' => false, 'message' => 'Gagal menghapus Artikel.'], 500);
       }
   }
 
   public function show($id){
-    $artikel = Artikel::findOrFail($id);
-    return view('admin.artikel.artikelDetail', compact('artikel'));
+    $response = Http::get("http://127.0.0.1:8001/api/artikel/{$id}");
+
+    if (!$response->successful()) {
+      return back()->withErrors(['error' => 'Gagal mengambil data dari API.']);
+    }
+
+    $artikelData = $response->json()['data'] ?? null;
+
+    if (!$artikelData) {
+      return back()->withErrors(['error' => 'Data artikel tidak ditemukan.']);
+    } // Konversi gambar ke array of [path, url]
+    $gambar = collect(json_decode($artikelData['gambar'] ?? '[]', true))
+      ->map(function ($filePath) {
+        return [
+          'path' => $filePath,
+          'url'  => env('BACKEND_FILE_URL') . '/' . ltrim($filePath, '/'),
+        ];
+      })
+      ->toArray();
+
+
+    $artikel = (object) $artikelData;
+
+    return view('admin.artikel.artikelDetail', compact('artikel', 'gambar'));
   }
 }

@@ -38,10 +38,12 @@
         <div class="mt-3">
             <p class="poppins-bold text-black" style="font-size: 14px;">Lampiran Saat Ini:</p>
             <ul id="gambar-list" style="list-style: none; padding: 0;">
-              @if (!empty($artikel->gambar))
-              @php
-                  $gambarArray = is_array($artikel->gambar) ? $artikel->gambar : json_decode($artikel->gambar, true);
-              @endphp
+                @if (!empty($artikel->gambar))
+                @php
+                    $gambarArray = is_array($artikel->gambar)
+                        ? $artikel->gambar
+                        : json_decode($artikel->gambar, true);
+                @endphp
           
               @if(is_array($gambarArray))
                   @foreach ($gambarArray as $index => $file)

@@ -49,7 +49,7 @@
                     <h5 class="card-title">
                         {{ $item->judul_artikel }}
                     </h5>
-                    <a href="{{ route('ppkha.detailArtikel', ['id' => $item->id]) }}">Selengkapnya..</a>
+                    <a class="text-white" href="{{ route('ppkha.detailArtikel', ['id' => $item->id]) }}">Selengkapnya..</a>
                 </div>
             </div>
             @endforeach

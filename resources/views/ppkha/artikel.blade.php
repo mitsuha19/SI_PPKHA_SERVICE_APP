@@ -25,11 +25,15 @@
                 <div class="background-card-artikel">
                     <div class="card" style="width: 18rem;">
                          @php
-                            $gambarArray = $item->gambar ?? []; // Laravel otomatis mengubah JSON ke array
+                            // Decode JSON atau gunakan array jika sudah dicast di model
+                            $gambarArray = is_string($item->gambar)
+                                ? json_decode($item->gambar, true)
+                                : ($item->gambar ?? []);
+                            $backendUrl = env('BACKEND_FILE_URL');
                         @endphp
 
                         @if (!empty($gambarArray) && isset($gambarArray[0]))
-                            <img class="card-img-top" src="{{ asset('storage/' . $gambarArray[0]) }}" alt="Gambar Artikel">
+                            <img class="card-img-top" src="{{ $backendUrl . '/' . $gambarArray[0] }}" alt="Gambar Artikel">
                         @else
                             <img class="card-img-top" src="{{ asset('assets/images/image.png') }}" alt="Default Gambar">
                         @endif
