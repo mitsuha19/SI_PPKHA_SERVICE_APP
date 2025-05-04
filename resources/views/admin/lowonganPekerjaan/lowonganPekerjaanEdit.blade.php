@@ -1,108 +1,126 @@
 @extends('layouts.appAdmin')
 
 @section('content')
-@include('components.navbarAdmin')
-<div class="main-content">
-  <h1 class="poppins-bold text-black mt-3" style="font-size: 22px">Edit Lowongan Pekerjaan</h1>
-  <div class="box-form">
-  <form action="{{ route('lowongan.update', $lowongan->id) }}" method="POST" enctype="multipart/form-data">
-      @csrf 
-      @method('PUT')
+    @include('components.navbarAdmin')
+    <div class="main-content">
+        <h1 class="poppins-bold text-black mt-3" style="font-size: 22px">Edit Daftar Perusahaan</h1>
 
-        <label for="judulLowongan" class="poppins-bold text-black mb-2">Judul Lowongan:</label>
-        <input type="text" class="form-control mb-3" id="judulLowongan" name="judulLowongan" value="{{ old('judulLowongan', $lowongan->judulLowongan) }}" required>
+        @if (session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
 
-        <label for="jenisLowongan" class="poppins-bold text-black mb-2">Jenis Lowongan:</label>
-        <input type="text" class="form-control mb-3" id="jenisLowongan" name="jenisLowongan" value="{{ old('jenisLowongan', $lowongan->jenisLowongan) }}" required>
+        @if ($errors->any())
+            <div class="alert alert-danger">
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
-        <label for="tipeLowongan" class="poppins-bold text-black mb-2">Tipe Lowongan:</label>
-        <select name="tipeLowongan" class="form-select" required>
-                      <option value="Full-time" {{ $lowongan->tipeLowongan == 'Full-time' ? 'selected' : '' }}>Full-time</option>
-                      <option value="Part-time" {{ $lowongan->tipeLowongan == 'Part-time' ? 'selected' : '' }}>Part-time</option>
-                      <option value="Magang" {{ $lowongan->tipeLowongan == 'Magang' ? 'selected' : '' }}>Magang</option>
-                      <option value="Kontrak" {{ $lowongan->tipeLowongan == 'Kontrak' ? 'selected' : '' }}>Kontrak</option>
-        </select>
+        <div class="box-form">
+            <form action="{{ route('admin.perusahaan.update', $perusahaan->id) }}" method="POST"
+                enctype="multipart/form-data">
+                @csrf
+                @method('PUT')
 
-        <label for="deskripsiLowongan" class="form-label poppins-bold text-black mb-2">Deskripsi Lowongan:</label>
-        <textarea class="form-control mb-3" id="deskripsiLowongan" name="deskripsiLowongan" placeholder="Masukkan Deskripsi Lowongan" required>{{ old('deskripsiLowongan', $lowongan->deskripsiLowongan) }}</textarea>
+                <label for="namaPerusahaan" class="poppins-bold text-black mb-2">Nama Perusahaan:</label>
+                <input type="text" class="form-control mb-3 @error('namaPerusahaan') is-invalid @enderror"
+                    id="namaPerusahaan" name="namaPerusahaan"
+                    value="{{ old('namaPerusahaan', $perusahaan->namaPerusahaan) }}">
+                @error('namaPerusahaan')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
 
-        <label for="kualifikasi" class="form-label poppins-bold text-black mb-2">Kualifikasi Lowongan:</label>
-        <textarea class="form-control mb-3" id="kualifikasi" name="kualifikasi" placeholder="Masukkan Kualifikasi Lowongan" required>{{ old('kualifikasi', $lowongan->kualifikasi) }}</textarea>  
+                <label for="lokasiPerusahaan" class="poppins-bold text-black mb-2">Alamat Perusahaan:</label>
+                <input type="text" class="form-control mb-3 @error('lokasiPerusahaan') is-invalid @enderror"
+                    id="alamatPerusahaan" name="lokasiPerusahaan"
+                    value="{{ old('lokasiPerusahaan', $perusahaan->lokasiPerusahaan) }}">
+                @error('lokasiPerusahaan')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
 
-        <label for="benefit" class="form-label poppins-bold text-black mb-2">Benefit Lowongan:</label>
-        <textarea class="form-control mb-3" id="benefit" name="benefit" placeholder="Masukkan Benefit Lowongan" required>{{ old('benefit', $lowongan->benefit) }}</textarea>  
+                <label for="websitePerusahaan" class="poppins-bold text-black mb-2">Website Perusahaan:</label>
+                <input type="text" class="form-control mb-3 @error('websitePerusahaan') is-invalid @enderror"
+                    id="websitePerusahaan" name="websitePerusahaan"
+                    value="{{ old('websitePerusahaan', $perusahaan->websitePerusahaan) }}">
+                @error('websitePerusahaan')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
 
-        <label for="keahlian" class="poppins-bold text-black mb-2">Tambahkan Keahlian Lowongan:</label>
-        <div id="keahlianContainer">
-    @php
-        $keahlianArray = old('keahlian', isset($lowongan->keahlian) ? explode(',', $lowongan->keahlian) : []);
-    @endphp
+                <label for="industriPerusahaan" class="poppins-bold text-black mb-2">Industri Perusahaan:</label>
+                <input type="text" class="form-control mb-3 @error('industriPerusahaan') is-invalid @enderror"
+                    id="industriPerusahaan" name="industriPerusahaan"
+                    value="{{ old('industriPerusahaan', $perusahaan->industriPerusahaan) }}">
+                @error('industriPerusahaan')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
 
-    @foreach($keahlianArray as $keahlian)
-    <div class="keahlian-item d-flex mb-2">
-        <input type="text" class="form-control me-2" name="keahlian[]" value="{{ trim($keahlian) }}" required>
-        <button type="button" class="btn btn-danger btn-sm" onclick="removeKeahlian(this)">❌</button>
-    </div>
-    @endforeach
-    <button type="button" class="btn mt-1 mb-3" style="width: fit-content; height: fit-content;" onclick="addKeahlian()">
-      <i class='bx bx-plus'></i>
-      Tambah Keahlian
-    </button> 
+                <label for="deskripsiPerusahaan" class="form-label poppins-bold text-black mb-2">Deskripsi
+                    Perusahaan:</label>
+                <textarea class="form-control mb-3 @error('deskripsiPerusahaan') is-invalid @enderror" id="deskripsiPerusahaan"
+                    name="deskripsiPerusahaan">{{ old('deskripsiPerusahaan', $perusahaan->deskripsiPerusahaan) }}</textarea>
+                @error('deskripsiPerusahaan')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
 
-</div>
+                <label for="upload" class="form-label poppins-bold text-black mt-2">Tambahkan Gambar/Logo:</label>
+                <div class="mb-3">
+                    <img src="{{ $perusahaan->logo ? config('services.main_api.url') . '/api/perusahaan/' . $perusahaan->id . '/logo' : asset('assets/images/default-logo.png') }}"
+                        alt="Logo Perusahaan" style="height: 100px;"
+                        onerror="this.onerror=null; this.src='{{ asset('assets/images/default-logo.png') }}'"
+                        onload="console.log('Logo loaded for ID {{ $perusahaan->id }}: ', this.src)">
+                </div>
+                <div class="button-wrap">
+                    <label class="buttonUploadFile" for="upload">
+                        <i class='bx bx-upload me-1'></i>
+                        Pilih File
+                    </label>
+                    <input id="upload" type="file" name="logo" onchange="previewFiles()" accept="image/*">
+                    <div id="file-preview" class="mt-2"></div>
+                    @error('logo')
+                        <div class="text-danger mt-1">{{ $message }}</div>
+                    @enderror
+                </div>
 
-
-    <label for="batasMulai" class="poppins-bold text-black mb-2">Batas Mulai Lamaran:</label>
-<input type="date" class="form-control mb-3" id="batasMulai" name="batasMulai" 
-    value="{{ old('batasMulai', isset($lowongan->batasMulai) ? date('Y-m-d', strtotime($lowongan->batasMulai)) : '') }}" required>
-
-<label for="batasAkhir" class="poppins-bold text-black mb-2">Batas Akhir Lamaran:</label>
-<input type="date" class="form-control mb-3" id="batasAkhir" name="batasAkhir" 
-    value="{{ old('batasAkhir', isset($lowongan->batasAkhir) ? date('Y-m-d', strtotime($lowongan->batasAkhir)) : '') }}" required>
-
-   
-
-        
-        
-        <div class="d-flex justify-content-end align-items-end gap-2">
-        <button type="submit" class="btn" style="background-color: #13C56B; color: white; border: none;">
-          Edit
-        </button>
-        <a href="{{ route('admin.lowonganPekerjaan.lowonganPekerjaan') }}" class="btn btn-secondary">Batal</a>
-          
+                <div class="d-flex justify-content-end align-items-end gap-2 mt-3">
+                    <a href="{{ route('admin.daftarPerusahaan.daftarPerusahaan') }}" class="btn btn-secondary">Batal</a>
+                    <button type="submit" class="btn btn-primary">Edit</button>
+                </div>
+            </form>
         </div>
-      </form>
-  </div>
-</div>
+    </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    let keahlianInput = document.getElementById("keahlian");
-    keahlianInput.addEventListener("input", function() {
-        this.value = this.value.replace(/[^a-zA-Z0-9, ]/g, '');
-    });
-});
-</script>
+    <script>
+        function previewFiles() {
+            let input = document.getElementById('upload');
+            let preview = document.getElementById('file-preview');
+            preview.innerHTML = '';
 
-<script>
- function addKeahlian() {
-    let container = document.getElementById('keahlianContainer');
-    let newInput = document.createElement('div');
-    newInput.classList.add('keahlian-item', 'd-flex', 'mb-2');
-    newInput.innerHTML = `
-        <input type="text" class="form-control me-2" name="keahlian[]" placeholder="Masukkan Keahlian" required>
-        <button type="button" class="btn btn-danger btn-sm" onclick="removeKeahlian(this)">❌</button>
-    `;
-    container.appendChild(newInput);
-}
+            if (input.files.length > 0) {
+                for (let i = 0; i < input.files.length; i++) {
+                    let file = input.files[i];
+                    let fileReader = new FileReader();
 
-function removeKeahlian(button) {
-    let container = document.getElementById('keahlianContainer');
-    if (container.children.length > 1) { // Pastikan minimal satu input tetap ada
-        button.parentElement.remove();
-    }
-}
-</script>
+                    fileReader.onload = function(e) {
+                        let fileType = file.type.split('/')[0];
+                        let fileDisplay = document.createElement('div');
+                        fileDisplay.classList.add('mb-2');
 
+                        if (fileType === 'image') {
+                            fileDisplay.innerHTML =
+                                `<img src="${e.target.result}" alt="Preview" class="img-thumbnail" width="100">`;
+                        } else {
+                            fileDisplay.innerHTML = `<p>${file.name}</p>`;
+                        }
 
+                        preview.appendChild(fileDisplay);
+                    };
+
+                    fileReader.readAsDataURL(file);
+                }
+            }
+        }
+    </script>
 @endsection

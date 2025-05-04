@@ -110,8 +110,8 @@ Route::group([
         Route::get('/', [PerusahaanController::class, 'index2'])->name('admin.daftarPerusahaan.daftarPerusahaan');
         Route::post('/', [PerusahaanController::class, 'store'])->name('admin.perusahaan.store');
         Route::get('/detail/{id}', [PerusahaanController::class, 'show1'])->name('admin.daftarPerusahaan.daftarPerusahaanDetail');
-        Route::get('/{id}/edit', [PerusahaanController::class, 'index4'])->name('admin.perusahaan.edit');
-        Route::put('/{id}', [PerusahaanController::class, 'update'])->name('perusahaan.update');
+        Route::get('/{id}/edit', [PerusahaanController::class, 'editView'])->name('admin.perusahaan.edit');
+        Route::put('/{id}', [PerusahaanController::class, 'update'])->name('admin.perusahaan.update');
         Route::delete('/{id}', [PerusahaanController::class, 'destroy'])->name('admin.daftarPerusahaan.destroy');
     });
 

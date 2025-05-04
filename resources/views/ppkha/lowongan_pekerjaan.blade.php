@@ -4,71 +4,77 @@
     @include('components.navbar')
 
     <div class="content-with-background">
-        @include('components.bg') <!-- Renders the background waves -->
+        @include('components.bg')
 
-        <!-- Top Search Bar Section (New, positioned at the top of content) -->
         <div class="top-search-bar-container">
-    <div class="top-search-bar d-flex align-items-center">
-        <form class="d-flex w-100" action="{{ route('ppkha.lowonganPekerjaan') }}" method="GET">
-            <input type="text" id="lowongan" name="search" class="form-control me-2" placeholder="Cari Lowongan Pekerjaan..." value="{{ request('search') }}">
-            <button type="submit" class="btn btn-primary">
-                <i class='bx bx-search bx-sm'></i>
-            </button>
-        </form>
-    </div>
-</div>
+            <div class="top-search-bar d-flex align-items-center">
+                <form class="d-flex w-100" action="{{ route('ppkha.lowonganPekerjaan') }}" method="GET">
+                    <input type="text" id="lowongan" name="search" class="form-control me-2"
+                        placeholder="Cari Lowongan Pekerjaan..." value="{{ request('search') }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class='bx bx-search bx-sm'></i>
+                    </button>
+                </form>
+            </div>
+        </div>
 
-        <div class="d-flex flex-column align-items-center gap-4">
-
+        <div class="d-flex flex-column align-items-center gap-4 mt-4">
             @foreach ($lowongan as $l)
                 <div class="background-card">
-                    <div class="card-information d-flex align-items-center px-3">
-                        @if ($l->perusahaan && $l->perusahaan->logo)
-                            <img src="{{ asset('storage/' . $l->perusahaan->logo) }}" alt="Logo Perusahaan">
+                    <div class="card-information d-flex align-items-center p-3 gap-3">
+                        @php
+                            $backendUrl = env('BACKEND_FILE_URL', 'http://127.0.0.1:8001');
+                            $logoUrl =
+                                isset($l->perusahaan['logo']) && $l->perusahaan['logo']
+                                    ? $backendUrl . '/storage/' . $l->perusahaan['logo']
+                                    : null;
+                            // Debug: Log the logo URL
+                            \Log::info('Logo URL for lowongan ' . $l->id . ': ' . ($logoUrl ?? 'No logo'));
+                        @endphp
+
+                        @if ($logoUrl)
+                            <img src="{{ $logoUrl }}" alt="Logo Perusahaan"
+                                style="width: 80px; height: 80px; object-fit: cover; border-radius: 10px;"
+                                onerror="this.src='{{ asset('assets/images/image.png') }}'">
+                        @else
+                            <img src="{{ asset('assets/images/image.png') }}" alt="Default Logo"
+                                style="width: 80px; height: 80px; object-fit: cover; border-radius: 10px;">
                         @endif
 
-                        <div class="ps-3 w-100">
-                            <div class="horizontal-card-text-section card-detail-perusahaan w-100">
-
-                                <div class="d-flex flex-row w-auto justify-content-between align-items-center w-100">
-                                    <h5 class="horizontal-card-title fw-bold mb-0">
-                                        {{ $l->judulLowongan }}
-                                    </h5>
-                                    <div class="d-flex flex-row justify-content-center align-items-center gap-1 detail">
-                                        <a href="{{ route('ppkha.lowonganPekerjaanDetail', ['id' => $l->id]) }}">Detail </a>
-                                        <i class='bx bx-sm bx-right-arrow-alt'></i>
-                                    </div>
+                        <div class="ps-2 w-100">
+                            <div class="d-flex justify-content-between align-items-center w-100 mb-1">
+                                <h5 class="fw-bold mb-0">{{ $l->judulLowongan }}</h5>
+                                <div class="d-flex flex-row align-items-center gap-1 detail">
+                                    <a href="{{ route('ppkha.lowonganPekerjaanDetail', ['id' => $l->id]) }}">Detail</a>
+                                    <i class='bx bx-sm bx-right-arrow-alt'></i>
                                 </div>
+                            </div>
 
-                                <hr class="my-1" style="border: 2px solid black; opacity: 1">
+                            <hr class="my-1" style="border: 1px solid black; opacity: 1">
 
-                                <p class="mb-0 montserrat-light">
-                                    {{ $l->perusahaan->namaPerusahaan ?? 'Perusahaan tidak tersedia' }}
-                                </p>
+                            <p class="mb-1 montserrat-light" style="font-size: 14px;">
+                                {{ $l->perusahaan['namaPerusahaan'] ?? 'Perusahaan tidak tersedia' }}
+                            </p>
 
-                                <ul class="roboto-light text-black mb-1 mt-2 w-100" style="font-size: 15px">
-                                    <li>
-                                        {!! nl2br(e(Str::limit($l->deskripsiLowongan, 100, '...'))) !!}
-                                    </li>
-                                </ul>
+                            <p class="roboto-light text-black mb-2" style="font-size: 13px;">
+                                {!! nl2br(e(Str::limit($l->deskripsiLowongan, 100, '...'))) !!}
+                            </p>
 
-
-                                <div class="d-flex flex-row gap-2">
-                                    <div class="pills">{{ $l->perusahaan->lokasiPerusahaan ?? 'Lokasi  tidak ada' }}</div>
-                                    <div class="pills">{{ $l->jenisLowongan }}</div>
-                                    <div class="pills">{{ $l->tipeLowongan }}</div>
-                                </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="pills small-pill">
+                                    {{ $l->perusahaan['lokasiPerusahaan'] ?? 'Lokasi tidak ada' }}</div>
+                                <div class="pills small-pill">{{ $l->jenisLowongan }}</div>
+                                <div class="pills small-pill">{{ $l->tipeLowongan ?? 'Full-Time' }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
             @endforeach
 
-            <div class="pagination">
-            {{ $lowongan->appends(request()->query())->links() }}
+            <div class="mt-4">
+                {{ $lowongan->appends(request()->query())->links() }}
+            </div>
         </div>
-        </div>
-
     </div>
 
     @include('components.footer')
