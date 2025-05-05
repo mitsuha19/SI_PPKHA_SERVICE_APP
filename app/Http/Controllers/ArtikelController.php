@@ -79,6 +79,7 @@ class ArtikelController extends Controller
 
     public function showArtikelDetailUser($id) {
         $response = Http::get("http://127.0.0.1:8001/api/artikel/{$id}");
+        $responseAll = Http::get("http://127.0.0.1:8001/api/artikel");
 
         if (!$response->successful()) {
             return back()->withErrors(['error' => 'Gagal mengambil data dari API.']);
@@ -97,15 +98,16 @@ class ArtikelController extends Controller
         })->toArray();
 
         $artikel = (object) $artikelData;
-
-        // return view('ppkha.detailArtikel', compact('artikel', 'gambar'));
-
-        // // Ambil artikel yang sedang ditampilkan
-        // $artikel = Artikel::findOrFail($id);
         
         // Ambil semua artikel sebagai rekomendasi
-        $artikelRekomendasi = Artikel::orderBy('created_at', 'desc')->get();
-        
+        $artikelRekomendasi = collect($responseAll->json()['data'] ?? [])
+          ->filter(function ($item) use ($id) {
+              return $item['id'] != $id; // hilangkan artikel yang sedang dilihat
+          })
+          ->sortByDesc('created_at')
+          ->values()
+          ->take(3);;
+      
         return view('ppkha.detailArtikel', compact('artikel', 'artikelRekomendasi', 'gambar'));
     }
 
@@ -157,12 +159,7 @@ class ArtikelController extends Controller
         return redirect()->route('admin.artikel.artikel')->with('success', 'Artikel berhasil ditambahkan!');
     }
 
-    // public function showArtikelEditAdmin($id){
-    //     $artikel = Artikel::findOrFail($id);// Ambil data artikel berdasarkan ID
-    //     return view('admin.artikel.artikelEdit', compact('artikel'));
-    // }
-
-    public function showArtikelEditAdmin($id)
+    public function showArtikelEditAdmin(Request $request, $id)
   {
     $response = Http::get("http://127.0.0.1:8001/api/artikel/{$id}");
 
@@ -175,8 +172,16 @@ class ArtikelController extends Controller
     if (!$artikelData) {
       return back()->withErrors('Artikel tidak ditemukan');
     }
+    
+    if (!empty($artikelData['gambar']) && is_string($artikelData['gambar'])) {
+      $decodedGambar = json_decode($artikelData['gambar'], true);
+      if (json_last_error() === JSON_ERROR_NONE) {
+          $artikelData['gambar'] = $decodedGambar;
+      }
+    }
 
     $artikel = (object) $artikelData;
+    //dd($artikel);
     return view('admin.artikel.artikelEdit', compact('artikel'));
   }
 
@@ -230,14 +235,29 @@ class ArtikelController extends Controller
     
     public function destroy($id)
   {
-      try {
-          $artikel = Artikel::findOrFail($id);
-          $artikel->delete();
-  
-          return response()->json(['success' => true]);
-      } catch (\Exception $e) {
-          return response()->json(['success' => false, 'message' => 'Gagal menghapus Artikel.'], 500);
+    try {
+      // Ambil token dari session
+      $token = Session::get('api_token');
+
+      if (!$token) {
+        return response()->json(['success' => false, 'message' => 'Token tidak tersedia. Silakan login kembali.'], 401);
       }
+
+      // Siapkan HTTP client dengan Bearer token
+      $http = Http::withToken($token);
+
+      // Kirim request DELETE ke Service Main untuk menghapus pengumuman
+      $response = $http->delete(config('services.main_api.url') . "/api/artikel/{$id}");
+
+      // Cek apakah penghapusan berhasil
+      if ($response->successful()) {
+        return response()->json(['success' => true, 'message' => 'Artikel berhasil dihapus.']);
+      } else {
+        return response()->json(['success' => false, 'message' => 'Gagal menghapus artikel.'], 500);
+      }
+    } catch (\Exception $e) {
+      return response()->json(['success' => false, 'message' => 'Gagal menghapus artikel: ' . $e->getMessage()], 500);
+    }
   }
 
   public function show($id){

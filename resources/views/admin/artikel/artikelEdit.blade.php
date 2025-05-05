@@ -48,7 +48,7 @@
               @if(is_array($gambarArray))
                   @foreach ($gambarArray as $index => $file)
                       <div id="lampiran-item-{{ $index }}" class="d-flex align-items-center mb-2">
-                          <img src="{{ asset('storage/' . $file) }}" alt="Gambar Artikel" width="100" class="me-2">
+                        <img src="{{ Storage::url($file) }}" alt="Gambar Artikel" width="100" class="me-2">
                           <label class="ms-2">
                               <input type="checkbox" name="hapus_gambar[]" value="{{ $file }}"> Hapus
                           </label>

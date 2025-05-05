@@ -35,7 +35,7 @@
               $file = $gambar[0]; // ambil file pertama
               $fileUrl = env('BACKEND_FILE_URL') . '/' . $file;
             @endphp
-            <img style="width: 100px" src="{{ $fileUrl }}" alt="Gambar Artikel">
+            <img class="card-img-top" style="width: 100px" src="{{ $fileUrl }}" alt="Gambar Artikel">
           @else
             <img class="card-img-top" src="{{ asset('assets/images/image.png') }}" alt="Default Gambar">
           @endif

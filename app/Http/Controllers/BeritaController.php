@@ -152,7 +152,7 @@ class BeritaController extends Controller
 
     $berita = (object) $beritaData;
 
-    return view('ppkha.detailBerita', compact('berita', 'gambar'));
+    return view('admin.berita.beritaDetail', compact('berita', 'gambar'));
   }
 
   public function store(Request $request)

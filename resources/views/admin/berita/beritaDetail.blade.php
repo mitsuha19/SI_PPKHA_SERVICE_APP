@@ -30,27 +30,23 @@
 
         {{-- Carousel untuk Gambar --}}
         <div class="w-100 d-flex justify-content-center m-2">
-          <div id="beritaCarousel" style="width: 80%" class="carousel slide" data-bs-ride="carousel">
+          <div id="beritaCarousel" style="width: 40%" class="carousel slide" data-bs-ride="carousel">
             <div class="carousel-indicators">
-              @php
-                $gambarArray = is_string($berita->gambar) ? json_decode($berita->gambar, true) : $berita->gambar;
-                $gambarArray = is_array($gambarArray) ? $gambarArray : [];
-              @endphp
-              @foreach ($gambarArray as $index => $gambar)
-                <button type="button" data-bs-target="#beritaCarousel" data-bs-slide-to="{{ $index }}" class="{{ $index == 0 ? 'active' : '' }}" aria-label="Slide {{ $index + 1 }}"></button>
+              @foreach ($gambar as $index => $item)
+                <button type="button" data-bs-target="#artikelCarousel" data-bs-slide-to="{{ $index }}"
+                  class="{{ $index == 0 ? 'active' : '' }}" aria-label="Slide {{ $index + 1 }}"></button>
               @endforeach
             </div>
             <div class="carousel-inner">
-              @foreach ($gambarArray as $index => $gambar)
+              @forelse ($gambar as $index => $item)
                 <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                  <img style="width: 100%" src="{{ asset('storage/' . $gambar) }}" class="d-block w-100">
+                  <img style="width: 100%" src="{{ $item['url'] }}" class="d-block w-100" alt="Gambar Artikel">
                 </div>
-              @endforeach
-              @if (empty($gambarArray))
+              @empty
                 <div class="carousel-item active">
-                  <img style="width: 100%" src="{{ asset('assets/images/image.png') }}" class="d-block w-100">
+                  <img style="width: 100%" src="{{ asset('assets/images/image.png') }}" class="d-block w-100" alt="Default Gambar">
                 </div>
-              @endif
+              @endforelse
             </div>
             <button class="carousel-control-prev" type="button" data-bs-target="#beritaCarousel" data-bs-slide="prev">
               <span class="carousel-control-prev-icon" aria-hidden="true"></span>

@@ -20,7 +20,7 @@
               <i class='bx bx-pencil'></i>
               <span class="d-none d-xl-inline ms-1">Edit</span>
             </a>
-            <button type="button" id="btn-hapus" class="btn align-items-center" onclick="openDeleteModal({{ $artikel->id }}, '{{ $artikel->judul_berita }}')">
+            <button type="button" id="btn-hapus" class="btn align-items-center" onclick="openDeleteModal({{ $artikel->id }}, '{{ $artikel->judul_artikel }}')">
                       <i class='bx bx-trash fs-5 me-2'></i> Hapus
                   </button>
           </div>
@@ -28,17 +28,37 @@
 
         <hr class="my-2 w-100" style="border: 1.5px solid black; opacity : 1;" >
 
-        <div class="d-flex justify-content-center">
-          @php
-              // Pastikan $berita->gambar adalah string sebelum di-decode
-              $gambarArray = is_string($artikel->gambar) ? json_decode($artikel->gambar, true) : $artikel->gambar;
-              $gambarArray = is_array($gambarArray) ? $gambarArray : [];
-          @endphp
-          @if (!empty($gambarArray) && isset($gambarArray[0]))
-              <img style="width: 80%" src="{{ asset('storage/' . $gambarArray[0]) }}">
-          @else
-              <img style="width: 80%" src="{{ asset('assets/images/image.png') }}">
-          @endif
+
+        {{-- Carousel untuk Gambar --}}
+        <div class="w-100 d-flex justify-content-center m-2">
+          <div id="artikelCarousel" style="width: 40%" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-indicators">
+              @foreach ($gambar as $index => $item)
+                <button type="button" data-bs-target="#artikelCarousel" data-bs-slide-to="{{ $index }}"
+                  class="{{ $index == 0 ? 'active' : '' }}" aria-label="Slide {{ $index + 1 }}"></button>
+              @endforeach
+            </div>
+            <div class="carousel-inner">
+              @forelse ($gambar as $index => $item)
+                <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
+                  <img style="width: 100%" src="{{ $item['url'] }}" class="d-block w-100" alt="Gambar Artikel">
+                </div>
+              @empty
+                <div class="carousel-item active">
+                  <img style="width: 100%" src="{{ asset('assets/images/image.png') }}" class="d-block w-100" alt="Default Gambar">
+                </div>
+              @endforelse
+            </div>
+      
+            <button class="carousel-control-prev" type="button" data-bs-target="#artikelCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#artikelCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          </div>
         </div>
 
         <p class="roboto-light mb-1 mt-2" style="font-size: 15px">
