@@ -15,7 +15,6 @@ class BeritaController extends Controller
   {
     $search = $request->input('search');
 
-    // Membuat HTTP request untuk mengambil data berita dari API
     $response = Http::get(config('services.main_api.url') . '/api/berita', [
       'search' => $search,
     ]);
@@ -68,7 +67,7 @@ class BeritaController extends Controller
         $currentPage,
         ['path' => request()->url(), 'query' => request()->query()]
       );
-     
+
       return view('ppkha.berita', compact('berita', 'search'));
     }
 
@@ -206,7 +205,7 @@ class BeritaController extends Controller
       return redirect()->route('login')->withErrors('Sesi habis, silakan login ulang');
     }
 
-   $request->validate([
+    $request->validate([
       'judul_berita' => 'required|string',
       'deskripsi_berita' => 'required|string',
       'gambar.*' => 'nullable|file|mimes:jpg,jpeg,png,gif',
@@ -230,11 +229,11 @@ class BeritaController extends Controller
     $response = $http->post(
       config('services.main_api.url') . "/api/berita/{$id}",
       [
-          '_method'          => 'PUT', // ini penting
-          'judul_berita'     => $request->judul_berita,
-          'deskripsi_berita' => $request->deskripsi_berita,
+        '_method'          => 'PUT', // ini penting
+        'judul_berita'     => $request->judul_berita,
+        'deskripsi_berita' => $request->deskripsi_berita,
       ]
-  );
+    );
 
     if (! $response->successful()) {
       $err = $response->json('message')
