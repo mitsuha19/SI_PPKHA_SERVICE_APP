@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Exception\RequestException;
+
+
 
 class PerusahaanController extends Controller
 {
@@ -37,7 +40,7 @@ class PerusahaanController extends Controller
                     return (object) $item;
                 });
 
-            \Log::info('Perusahaan Data', $data->toArray());
+            Log::info('Perusahaan Data', $data->toArray());
 
             $perPage = 2;
             $currentPage = LengthAwarePaginator::resolveCurrentPage();
@@ -52,7 +55,7 @@ class PerusahaanController extends Controller
 
             return view('admin.daftarPerusahaan.daftarPerusahaan', compact('perusahaan', 'search', 'token'));
         } catch (\Exception $e) {
-            \Log::error('Index2 Error: ' . $e->getMessage());
+            Log::error('Index2 Error: ' . $e->getMessage());
             return back()->withErrors('Gagal mengambil data perusahaan: ' . $e->getMessage());
         }
     }
@@ -72,7 +75,7 @@ class PerusahaanController extends Controller
 
             $responseData = json_decode($response->getBody()->getContents(), true);
 
-            \Log::info('Raw API Response for Perusahaan: ', $responseData);
+            Log::info('Raw API Response for Perusahaan: ', $responseData);
 
             if (!$responseData['success'] || !$responseData['data']) {
                 return back()->withErrors('Data perusahaan tidak ditemukan');
@@ -80,11 +83,11 @@ class PerusahaanController extends Controller
 
             $perusahaan = (object) $responseData['data'];
 
-            \Log::info('Processed Perusahaan Data: ', (array) $perusahaan);
+            Log::info('Processed Perusahaan Data: ', (array) $perusahaan);
 
             return view('admin.daftarPerusahaan.daftarPerusahaanEdit', compact('perusahaan'));
         } catch (\Exception $e) {
-            \Log::error('Edit Error: ' . $e->getMessage());
+            Log::error('Edit Error: ' . $e->getMessage());
             return back()->withErrors('Gagal mengambil data perusahaan: ' . $e->getMessage());
         }
     }
@@ -247,14 +250,14 @@ class PerusahaanController extends Controller
             $perusahaan = (object) $data;
             $lowongan = isset($data['lowongan']) ? collect($data['lowongan'])->map(fn($item) => (object) $item) : collect();
 
-            \Log::info('Perusahaan Detail Data with Lowongan', [
+            Log::info('Perusahaan Detail Data with Lowongan', [
                 'perusahaan' => (array) $perusahaan,
                 'lowongan' => $lowongan->toArray(),
             ]);
 
             return view('admin.daftarPerusahaan.daftarPerusahaanDetail', compact('perusahaan', 'lowongan'));
         } catch (\Exception $e) {
-            \Log::error('Show1 Error: ' . $e->getMessage());
+            Log::error('Show1 Error: ' . $e->getMessage());
             return back()->withErrors('Gagal mengambil detail perusahaan: ' . $e->getMessage());
         }
     }

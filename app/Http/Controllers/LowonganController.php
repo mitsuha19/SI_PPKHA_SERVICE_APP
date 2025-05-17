@@ -10,6 +10,7 @@ use GuzzleHttp\Client;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
 
 class LowonganController extends Controller
 {
@@ -38,7 +39,7 @@ class LowonganController extends Controller
                     return $item;
                 });
 
-            \Log::info('Lowongan Data with Perusahaan', $data->toArray());
+            Log::info('Lowongan Data with Perusahaan', $data->toArray());
 
             $perPage = 2;
             $currentPage = LengthAwarePaginator::resolveCurrentPage();
@@ -53,7 +54,7 @@ class LowonganController extends Controller
 
             return view('admin.lowonganPekerjaan.lowonganPekerjaan', compact('lowongan', 'search'));
         } catch (\Exception $e) {
-            \Log::error('Index2 Error: ' . $e->getMessage());
+            Log::error('Index2 Error: ' . $e->getMessage());
             return back()->withErrors('Gagal mengambil data lowongan: ' . $e->getMessage());
         }
     }
@@ -128,7 +129,7 @@ class LowonganController extends Controller
             $lowonganData = json_decode($lowonganResponse->getBody()->getContents(), true);
 
             // Log the raw API response
-            \Log::info('Raw API Response for Lowongan: ', $lowonganData);
+            Log::info('Raw API Response for Lowongan: ', $lowonganData);
 
             if (!$lowonganData['success'] || !$lowonganData['data']) {
                 return back()->withErrors('Data lowongan tidak ditemukan');
@@ -152,7 +153,7 @@ class LowonganController extends Controller
             }
 
             // Log the processed keahlian data
-            \Log::info('Processed Keahlian Data: ', $lowongan->keahlian);
+            Log::info('Processed Keahlian Data: ', $lowongan->keahlian);
 
             $perusahaanResponse = $this->client->get('/api/perusahaan');
             $perusahaanData = json_decode($perusahaanResponse->getBody()->getContents(), true);
@@ -165,7 +166,7 @@ class LowonganController extends Controller
 
             return view('admin.lowonganPekerjaan.lowonganPekerjaanEdit', compact('lowongan', 'perusahaan'));
         } catch (\Exception $e) {
-            \Log::error('Index4 Error: ' . $e->getMessage());
+            Log::error('Index4 Error: ' . $e->getMessage());
             return back()->withErrors('Gagal mengambil data: ' . $e->getMessage());
         }
     }
@@ -175,7 +176,7 @@ class LowonganController extends Controller
         try {
             $response = $this->client->get("/api/lowongan/{$id}");
             $lowonganData = json_decode($response->getBody()->getContents(), true);
-            \Log::info('Raw API Response for Lowongan in show1: ', $lowonganData);
+            Log::info('Raw API Response for Lowongan in show1: ', $lowonganData);
 
             if (!$lowonganData['success'] || !isset($lowonganData['data'])) {
                 return back()->withErrors('Data lowongan tidak ditemukan');
@@ -183,11 +184,11 @@ class LowonganController extends Controller
 
             $lowongan = (object) $lowonganData['data'];
             $lowongan->perusahaan = isset($lowonganData['data']['perusahaan']) ? (object) $lowonganData['data']['perusahaan'] : (object) [];
-            \Log::info('Logo Path in show1: ', ['logo' => $lowongan->perusahaan->logo ?? 'Not Set']);
+            Log::info('Logo Path in show1: ', ['logo' => $lowongan->perusahaan->logo ?? 'Not Set']);
 
             return view('admin.lowonganPekerjaan.lowonganPekerjaanDetail', compact('lowongan'));
         } catch (\Exception $e) {
-            \Log::error('Error in show1: ' . $e->getMessage());
+            Log::error('Error in show1: ' . $e->getMessage());
             return back()->withErrors('Gagal mengambil detail lowongan');
         }
     }
@@ -274,7 +275,7 @@ class LowonganController extends Controller
 
             return back()->withErrors('Gagal menambahkan lowongan: ' . ($responseData['message'] ?? 'Unknown error'))->withInput();
         } catch (\Exception $e) {
-            \Log::error('Store Error: ' . $e->getMessage());
+            Log::error('Store Error: ' . $e->getMessage());
             return back()->withErrors('Gagal menambahkan lowongan: ' . $e->getMessage())->withInput();
         }
     }
@@ -302,8 +303,8 @@ class LowonganController extends Controller
             $token = Session::get('api_token');
 
             // Log session data for debugging
-            \Log::info('Session Data in Update: ', session()->all());
-            \Log::info('JWT Token in Update: ' . ($token ?? 'Not Found'));
+            Log::info('Session Data in Update: ', session()->all());
+            Log::info('JWT Token in Update: ' . ($token ?? 'Not Found'));
 
             if (!$token) {
                 return redirect()->route('login')->withErrors('Gagal memperbarui lowongan: Token autentikasi tidak ditemukan. Silakan login kembali.');
@@ -336,7 +337,7 @@ class LowonganController extends Controller
             $responseData = json_decode($response->getBody()->getContents(), true);
 
             // Log the API response for debugging
-            \Log::info('Update Lowongan API Response: ', $responseData);
+            Log::info('Update Lowongan API Response: ', $responseData);
 
             // Check if API request was successful
             if (isset($responseData['success']) && $responseData['success']) {
@@ -345,9 +346,8 @@ class LowonganController extends Controller
             }
 
             return redirect()->back()->withErrors('Gagal memperbarui lowongan: ' . ($responseData['message'] ?? 'Kesalahan tidak diketahui.'));
-
         } catch (\GuzzleHttp\Exception\RequestException $e) {
-            \Log::error('Update Lowongan Error: ' . $e->getMessage());
+            Log::error('Update Lowongan Error: ' . $e->getMessage());
             $errorMessage = 'Gagal memperbarui lowongan: ';
 
             if ($e->hasResponse()) {
@@ -359,7 +359,7 @@ class LowonganController extends Controller
 
             return redirect()->back()->withErrors($errorMessage);
         } catch (\Exception $e) {
-            \Log::error('Update Lowongan Error: ' . $e->getMessage());
+            Log::error('Update Lowongan Error: ' . $e->getMessage());
             return redirect()->back()->withErrors('Gagal memperbarui lowongan: ' . $e->getMessage());
         }
     }
@@ -432,7 +432,7 @@ class LowonganController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Gagal menghapus lowongan: ' . ($responseData['message'] ?? 'Kesalahan tidak diketahui.')], 400);
         } catch (\GuzzleHttp\Exception\RequestException $e) {
-            \Log::error('Destroy Lowongan Error: ' . $e->getMessage());
+            Log::error('Destroy Lowongan Error: ' . $e->getMessage());
             $errorMessage = 'Gagal menghapus lowongan: ';
             if ($e->hasResponse()) {
                 $response = json_decode($e->getResponse()->getBody()->getContents(), true);
@@ -442,7 +442,7 @@ class LowonganController extends Controller
             }
             return response()->json(['success' => false, 'message' => $errorMessage], 500);
         } catch (\Exception $e) {
-            \Log::error('Destroy Lowongan Error: ' . $e->getMessage());
+            Log::error('Destroy Lowongan Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Gagal menghapus lowongan: ' . $e->getMessage()], 500);
         }
     }
